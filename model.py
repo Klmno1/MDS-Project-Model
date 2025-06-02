@@ -15,10 +15,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# The keys has to match the type set in the frontend tsx file
 class InputData(BaseModel):
     price: float
     category: str
-    product_name: str
+    product: str
     date: str
 
 @app.post("/predict")
@@ -28,7 +29,7 @@ async def predict(data: InputData):
         "message": "Data received successfully.",
         "price": data.price,
         "category": data.category,
-        "product_name": data.product_name,
+        "product_name": data.product,
         "date": data.date,
         "probability": 0.42  # temporary dummy output
     }
