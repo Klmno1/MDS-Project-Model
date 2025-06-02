@@ -1,7 +1,8 @@
 # main.py
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-# from pydantic import BaseModel
+# FastAPI requires request bodies to be defined with Pydantic models that inherit from BaseModel.
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -14,7 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class InputData():
+class InputData(BaseModel):
     price: float
     category: str
     product_name: str
