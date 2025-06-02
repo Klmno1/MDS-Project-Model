@@ -1,7 +1,7 @@
 # main.py
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+# from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -14,9 +14,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class InputData(BaseModel):
+class InputData():
     price: float
     category: str
+    product_name: str
     date: str
 
 @app.post("/predict")
@@ -26,6 +27,7 @@ async def predict(data: InputData):
         "message": "Data received successfully.",
         "price": data.price,
         "category": data.category,
+        "product_name": data.product_name,
         "date": data.date,
         "probability": 0.42  # temporary dummy output
     }
