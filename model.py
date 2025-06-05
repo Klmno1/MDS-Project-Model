@@ -1,3 +1,7 @@
+# Start Server uvicorn main:app --reload --port 8000
+# 	This tells Uvicorn where your FastAPI app is located.
+# 🔹 main = the filename (main.py)
+# 🔹 app = the FastAPI instance inside that file (e.g., app = FastAPI())
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -10,7 +14,8 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    # allow_origins=["*"],
+    allow_origins=["http://localhost:3000"], # Only allow local
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -89,6 +94,12 @@ def prepare_input_row(data: InputData, rules) -> pd.DataFrame:
     for idx, rule in enumerate(rules):
         lhs_items = set(rule.lhs)
         row[f'cat_rule_{idx:03d}'] = int(lhs_items.issubset(basket))
+    
+    # for idx, rule in enumerate(rules):
+    #     lhs = '_'.join(rule.lhs).replace(" ", "")
+    #     rhs = '_'.join(rule.rhs).replace(" ", "")
+    #     rule_label = f"{lhs}_to_{rhs}"
+    #     row[rule_label] = int(set(rule.lhs).issubset(basket))
 
     return pd.DataFrame([row]), price
 
@@ -164,25 +175,43 @@ def get_feature_importance(xgb_model, feature_names):
 async def predict(data: InputData):
     try:
         input_df, price = prepare_input_row(data, category_rules)
-        
+        print(input_df)
         # Model input:
         # Price, CustomerID, Month, Country, Season, category, cat_rule for input
         # prob return probs of class [class 0, class 1] where class 1 is the returned prob
         # prob = stack_model.predict_proba(input_df)[0][1]
-        prob = xgb_model.predict_proba(input_df)[0][1]
+        prob = xgb_model.predict_proba(input_df)[0][0]
         
         # feature_names = stack_model.named_estimators_['xgb'].named_steps['preprocessor'].get_feature_names_out()
         # importances = get_feature_importance(stack_model, feature_names)
         
         importances = get_feature_importance(xgb_model, list(input_df.columns))
+        
+        # Step 1: Build mapping from cat_rule_XXX to readable rule name
+        rule_name_map = {}
+        for idx, rule in enumerate(category_rules):
+            lhs = '_'.join(rule.lhs).replace(" ", "")
+            rhs = '_'.join(rule.rhs).replace(" ", "")
+            rule_label = f"{lhs}_to_{rhs}"
+            rule_name_map[f'cat_rule_{idx:03d}'] = rule_label
 
+        # Step 2: Replace keys in importances
+        readable_importances = {}
+        for key, val in importances.items():
+            readable_key = rule_name_map.get(key, key)  # fallback to original if not a cat_rule
+            readable_importances[readable_key] = val
+
+        # Optional: sort by importance descending
+        readable_importances = dict(sorted(readable_importances.items(), key=lambda x: -x[1]))
+        
+        # print(readable_importances)
         return {
             "price": round(float(price), 2),
             "category": data.category,
             "product_name": data.product,
             "date": data.date,
             "probability": round(float(prob), 4),
-            "feature_importance": dict(list(importances.items()))
+            "feature_importance": {k: float(v) for k, v in readable_importances.items()}
             # "feature_importance": dict(list(importances.items())[:10]),  # return top 10
         }
     except Exception as e:
