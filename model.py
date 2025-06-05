@@ -180,7 +180,7 @@ async def predict(data: InputData):
         # Price, CustomerID, Month, Country, Season, category, cat_rule for input
         # prob return probs of class [class 0, class 1] where class 1 is the returned prob
         # prob = stack_model.predict_proba(input_df)[0][1]
-        prob = xgb_model.predict_proba(input_df)[0][0]
+        prob = xgb_model.predict_proba(input_df)[0][1]
         
         # feature_names = stack_model.named_estimators_['xgb'].named_steps['preprocessor'].get_feature_names_out()
         # importances = get_feature_importance(stack_model, feature_names)
